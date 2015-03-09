@@ -2,10 +2,14 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import data.FlightListing;
+import data.Message;
 
 
 public class Server {
@@ -14,12 +18,14 @@ public class Server {
 	private DatagramSocket incoming = null;
 	// Buffer for requests coming in
 	private byte[] buffer = new byte[1000];
-	// Threadpool to manage reply worker threads
+	// Thread pool to manage reply worker threads
 	private ExecutorService pool;
 	// Class containing flight data
 	private FlightListing flightData;
+	// Storage for request history
+	private Set<Message> requestHistory;
 	// Name of the file containing the flight data
-	private static final String FILENAME = "flightdata.txt";
+	private static final String FILENAME = "flightdata.csv";
 	
 	public Server(){
 		
@@ -27,7 +33,10 @@ public class Server {
 		this.pool = Executors.newCachedThreadPool();
 		
 		// Initialise Flight data store
-		flightData = new FlightListing(FILENAME);
+		this.flightData = new FlightListing(FILENAME);
+		
+		// Initialise structure for storing flight history
+		this.requestHistory =  Collections.newSetFromMap(new ConcurrentHashMap<Message,Boolean>());
 		
 		try {
 			// Open UDP Socket on port 8888
@@ -42,7 +51,7 @@ public class Server {
 				this.incoming.receive(request);
 				
 				// Pass onto worker thread to process and create reply
-				this.pool.execute(new Worker(this.flightData, request));
+				this.pool.execute(new Worker(this, request));
 			}
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
@@ -51,6 +60,20 @@ public class Server {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * @return the flightData
+	 */
+	public FlightListing getFlightData() {
+		return flightData;
+	}
+
+	/**
+	 * @return the requestHistory
+	 */
+	public Set<Message> getRequestHistory() {
+		return requestHistory;
 	}
 	
 }

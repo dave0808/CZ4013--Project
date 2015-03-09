@@ -1,25 +1,41 @@
 package data;
 
+import java.net.DatagramPacket;
+import java.net.SocketAddress;
+
 public class Message {
 
 	private int requestID;
 	
-	private String clientIP;
+	private SocketAddress clientIP;
 		
-	private byte[] reply;
+	private DatagramPacket reply;
 	
-	public Message(int id, String ip, byte[] reply){
+	public Message(int id, DatagramPacket reply){
 		this.requestID = id;
-		this.clientIP = ip;
 		this.reply = reply;
+		this.clientIP = this.reply.getSocketAddress();
 		
 	}
 	
 	/**
 	 * @return the reply
 	 */
-	public byte[] getReply() {
+	public DatagramPacket getReply() {
 		return reply;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((clientIP == null) ? 0 : clientIP.hashCode());
+		result = prime * result + requestID;
+		return result;
 	}
 
 	/* (non-Javadoc)
@@ -51,15 +67,7 @@ public class Message {
 	}
 	
 	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
+	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((clientIP == null) ? 0 : clientIP.hashCode());
-		result = prime * result + requestID;
-		return result;
-	}
+	
 }
