@@ -26,6 +26,18 @@ public class FlightListing {
 		 throw new InvalidIDException("Invalid ID");
 	}
 	
+	public boolean hasAirport(String port){
+		
+		for(Flight f : Flights){
+			if(f.getSource().equals(port)){
+				return true;
+			}
+			else if(f.getDestination().equals(port)){
+				return true;
+			}
+		}
+		return false;
+	}
 	public List<Flight> getFlight(String src, String dest){
 		
 		List<Flight> temp = new ArrayList<Flight>();

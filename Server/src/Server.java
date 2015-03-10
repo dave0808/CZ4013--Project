@@ -29,9 +29,11 @@ public class Server {
 	
 	public Server(){
 		
+		System.out.println("Initialising Server.");
 		// Using CachedThreadpool to allow dynamic response
 		this.pool = Executors.newCachedThreadPool();
 		
+		System.out.println("Initialising storage.");
 		// Initialise Flight data store
 		this.flightData = new FlightListing(FILENAME);
 		
@@ -40,6 +42,7 @@ public class Server {
 		
 		try {
 			// Open UDP Socket on port 8888
+			System.out.println("Opening datagram socket.");
 			this.incoming = new DatagramSocket(8888);
 			
 			while(true){
@@ -48,9 +51,11 @@ public class Server {
 				DatagramPacket request = new DatagramPacket(buffer, buffer.length);
 				
 				// Blocking, so will wait for new request to be received
+				System.out.println("Listening for incoming packet.");
 				this.incoming.receive(request);
 				
 				// Pass onto worker thread to process and create reply
+				System.out.println("Passing to worker thread.");
 				this.pool.execute(new Worker(this, request));
 			}
 		} catch (SocketException e) {

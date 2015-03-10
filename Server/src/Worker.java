@@ -4,7 +4,9 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.util.List;
 
+import data.Flight;
 import data.FlightListing;
 import data.InvalidMessageException;
 import data.Message;
@@ -51,8 +53,8 @@ public class Worker implements Runnable {
 		}
 		else{
 			// if not then continue on and create reply
-			byte[] byteReply = this.process(bb);
-			reply = new DatagramPacket(byteReply, byteReply.length, this.request.getSocketAddress());
+			ByteBuffer byteReply = this.process(bb);
+			reply = new DatagramPacket(byteReply.array(), byteReply.array().length, this.request.getSocketAddress());
 		}
 		
 		this.outgoing = new DatagramSocket(8888);
@@ -85,8 +87,8 @@ public class Worker implements Runnable {
 		}
 	}
 	
-	private byte[] process(ByteBuffer buff) throws InvalidMessageException{
-		byte[] reply;
+	private ByteBuffer process(ByteBuffer buff) throws InvalidMessageException{
+		ByteBuffer reply = null;
 		
 		try{
 			
@@ -121,18 +123,76 @@ public class Worker implements Runnable {
 	 * should be returned to the user. If no flight matches the source and destination places, an error
 	 *  message should be returned.”	
 	*/	
-	private byte[] messageType1(ByteBuffer buff) throws InvalidMessageException{
-		return null;
+	private ByteBuffer messageType1(ByteBuffer buff) throws InvalidMessageException{
 		
+		int origLen = 0;
+		String orig = "";
+		int destLen = 0;
+		String dest = "";
+		
+		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
+		
+		List<Flight> flights;
+		
+		try{
+			// Get length of origin string
+			origLen = buff.getInt();
+			// Build origin string
+			for(int i = 0; i < origLen;i++){
+				orig += buff.getChar();
+			}
+			// Get length of destination string
+			destLen = buff.getInt();
+			// Build destination string
+			for(int i = 0; i < destLen;i++){
+				dest += buff.getChar();
+			}
+			
+			// Check database for flights
+			flights = this.masterServer.getFlightData().getFlight(orig, dest);
+			// Build response
+			int len = flights.size();
+			
+			if(len == 0){	
+				
+				if(this.masterServer.getFlightData().hasAirport(orig)){
+					len =-1;
+				}
+				if(this.masterServer.getFlightData().hasAirport(dest)){
+					len =-2;
+				}
+				reply.putInt(len);
+			}
+			else{
+				
+				reply.putInt(len);
+				for(int i = 0; i < len; i++){
+					reply.putInt(flights.get(i).getId());
+				}
+			}
+		}
+		catch(BufferUnderflowException e){
+			throw new InvalidMessageException("The data is not in correct format");
+		}
+		
+		return null;		
 	}
 	
 	/*	“A service that allows a user to query the departure time, airfare and seat availability
 	 *  by specifying the flight identifier. If the flight with the requested identifier does not 
 	 *  exist, an error message should be returned.”
 	*/	
-	private byte[] messageType2(ByteBuffer buff) throws InvalidMessageException{
-		return null;
+	private ByteBuffer messageType2(ByteBuffer buff) throws InvalidMessageException{
 		
+		try{
+			
+			
+		}
+		catch(BufferUnderflowException e){
+			throw new InvalidMessageException("The data is not in correct format");
+		}
+		
+		return null;		
 	}
 	
 	/*	“A service that allows a user to make seat reservation on a flight by specifying the flight 
@@ -141,9 +201,17 @@ public class Worker implements Runnable {
 	 * In case of incorrect user input (e.g., not-existing flight identifier or insufficient number of 
 	 * available seats), a proper error message should be returned.”
 	*/	
-	private byte[] messageType3(ByteBuffer buff) throws InvalidMessageException{
-		return null;
+	private ByteBuffer messageType3(ByteBuffer buff) throws InvalidMessageException{
 		
+		try{
+			
+			
+		}
+		catch(BufferUnderflowException e){
+			throw new InvalidMessageException("The data is not in correct format");
+		}
+		
+		return null;	
 	}
 
 	/*	“A service that allows a user to monitor updates made to the seat availability 
@@ -151,9 +219,17 @@ public class Worker implements Runnable {
 	 * To register, the client provides the flight identifier and the length of monitor 
 	 * interval to the server.”
 	*/	
-	private byte[] messageType4(ByteBuffer buff) throws InvalidMessageException{
-		return null;
+	private ByteBuffer messageType4(ByteBuffer buff) throws InvalidMessageException{
 		
+		try{
+			
+			
+		}
+		catch(BufferUnderflowException e){
+			throw new InvalidMessageException("The data is not in correct format");
+		}
+		
+		return null;
 	}
 
 	/*	“A service that allows a user to cancel a seat reservation on a flight by specifying the 
@@ -162,7 +238,16 @@ public class Worker implements Runnable {
 	 * updated at the server. In case of incorrect user input (e.g., not-existing flight identifier or 
 	 * insufficient number of booked seats), a proper error message should be returned.”
 	*/	
-	private byte[] messageType5(ByteBuffer buff) throws InvalidMessageException{
+	private ByteBuffer messageType5(ByteBuffer buff) throws InvalidMessageException{
+		
+		try{
+			
+			
+		}
+		catch(BufferUnderflowException e){
+			throw new InvalidMessageException("The data is not in correct format");
+		}
+		
 		return null;
 	}
 
@@ -170,7 +255,16 @@ public class Worker implements Runnable {
 	 * The user will specify the source as a string and will receive as a reply a list of possible 
 	 * destinations as strings.”
 	*/	
-	private byte[] messageType6(ByteBuffer buff) throws InvalidMessageException{
+	private ByteBuffer messageType6(ByteBuffer buff) throws InvalidMessageException{
+		
+		try{
+			
+			
+		}
+		catch(BufferUnderflowException e){
+			throw new InvalidMessageException("The data is not in correct format");
+		}
+		
 		return null;
 	}
 
