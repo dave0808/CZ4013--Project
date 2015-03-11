@@ -16,14 +16,21 @@ public class FlightListing {
 		this.getFlightData(filename);
 	}
 	
-	public Flight getFlight(int id) throws InvalidIDException{
+	/*
+	 * Get the flight represented by id,
+	 * returns null if flight does not exist
+	 */
+	public Flight getFlight(int id){
 
+		Flight requested = null;
+		
 		for(Flight f : Flights){
 			if (f.getId() == id){
-				return f;
+				requested = f;
+				break;
 			}
 		}
-		 throw new InvalidIDException("Invalid ID");
+		return requested;
 	}
 	
 	public boolean hasAirport(String port){
@@ -50,15 +57,22 @@ public class FlightListing {
 		}
 		return temp;
 	}
-
-	public boolean buyTickets(int id, int no) throws InvalidIDException{
+	/*
+	 * Attempts to book number n tickets for flight id
+	 * True if possible and false if not. 
+	 * This should always be carried out after checking if flight exists
+	 */
+	public boolean buyTickets(int id, int n){
+		
+		boolean booked = false;
 		
 		for(Flight f : Flights){
 			if(f.getId() == id){
-				return f.bookSeats(no);
+				booked = f.bookSeats(n);
+				break;
 			}
 		}
-		 throw new InvalidIDException("Invalid ID");	
+		return booked;
 	}
 	
 	private void getFlightData(String fileName){

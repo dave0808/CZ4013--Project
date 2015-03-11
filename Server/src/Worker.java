@@ -5,14 +5,15 @@ import java.net.SocketException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 
 import data.Flight;
-import data.FlightListing;
 import data.InvalidMessageException;
 import data.Message;
 
 
-public class Worker implements Runnable {
+public class Worker implements Runnable, Observer {
 
 	// Request packet, should be passed in from Server thread.
 	private DatagramPacket request = null;
@@ -20,6 +21,12 @@ public class Worker implements Runnable {
 	private DatagramSocket outgoing = null;
 	// Class storing flight data
 	private Server masterServer;
+	// Length of time it should monitor a flight, 
+	//should only be set to a number if  service is requested
+	private int monitorLen = 0;
+	
+	private int id = -1;
+	private byte mType = 0;
 	
 	public Worker(Server master, DatagramPacket req){
 		
@@ -32,13 +39,13 @@ public class Worker implements Runnable {
 	public void run() {
 		DatagramPacket reply = null;
 		
-		int id = -1;
-		
+
 		ByteBuffer bb = ByteBuffer.wrap(this.request.getData());
 		
 		try {
 			
-			id = this.getID(bb);
+			this.id = bb.getInt();
+			this.mType = bb.get();
 			
 			Message dummy = new Message(id, new DatagramPacket(null, 0, this.request.getSocketAddress()));
 
@@ -53,16 +60,42 @@ public class Worker implements Runnable {
 		}
 		else{
 			// if not then continue on and create reply
-			ByteBuffer byteReply = this.process(bb);
+			ByteBuffer tempReply = this.process(bb);
+			
+			ByteBuffer byteReply = ByteBuffer.wrap(new byte[1000]);
+
+			byteReply.putInt(this.id);
+			byteReply.put(this.mType);
+			tempReply.position(0);
+			byteReply.put(tempReply);
 			reply = new DatagramPacket(byteReply.array(), byteReply.array().length, this.request.getSocketAddress());
 		}
 		
 		this.outgoing = new DatagramSocket(8888);
 		this.outgoing.send(reply);
 		
-		// We only want to add to the history is it was sucssfully sent
+		// We only want to add to the history is it was successfully sent
 		this.masterServer.getRequestHistory().add(new Message(id, reply));
 		this.outgoing.close();
+		
+		// Check if we need to perform the monitoring function
+		if(this.monitorLen > 0){
+			double time = 0;
+			while(true){
+				
+				try {
+					Thread.sleep(250);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				time += 0.25;
+				if(time >= this.monitorLen){
+					break;
+				}
+			}
+		}
 		
 		} catch (InvalidMessageException e) {
 			// TODO Auto-generated catch block
@@ -73,17 +106,6 @@ public class Worker implements Runnable {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-	}
-	
-	private int getID(ByteBuffer buff) throws InvalidMessageException{
-		int id = -1;
-		try{
-		id = buff.getInt();
-		return id;
-		}
-		catch(BufferUnderflowException e){
-			throw new InvalidMessageException("The data is not in correct format");
 		}
 	}
 	
@@ -130,8 +152,10 @@ public class Worker implements Runnable {
 		int destLen = 0;
 		String dest = "";
 		
+		// Initialise reply data buffer
 		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
 		
+		// Initialise default reply data
 		List<Flight> flights;
 		
 		try{
@@ -153,6 +177,16 @@ public class Worker implements Runnable {
 			// Build response
 			int len = flights.size();
 			
+			/*
+			 * If len is 0 here it means that one or both airports don't exist, or there is no route
+			 * 
+			 * For reply values for len mean:
+			 * 
+			 * len = 0 : no route
+			 * len = -1 : only origin not present
+			 * len = -2 : only destination not present
+			 * len = -3 : both origin and destination not present
+			 */
 			if(len == 0){	
 				
 				if(this.masterServer.getFlightData().hasAirport(orig)){
@@ -164,7 +198,7 @@ public class Worker implements Runnable {
 				reply.putInt(len);
 			}
 			else{
-				
+				// Routes were found, put in reply
 				reply.putInt(len);
 				for(int i = 0; i < len; i++){
 					reply.putInt(flights.get(i).getId());
@@ -175,7 +209,7 @@ public class Worker implements Runnable {
 			throw new InvalidMessageException("The data is not in correct format");
 		}
 		
-		return null;		
+		return reply;		
 	}
 	
 	/*	“A service that allows a user to query the departure time, airfare and seat availability
@@ -184,15 +218,42 @@ public class Worker implements Runnable {
 	*/	
 	private ByteBuffer messageType2(ByteBuffer buff) throws InvalidMessageException{
 		
+		// Initialise reply data buffer
+		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
+		
+		// Initialise default reply data
+		int avail = -1;
+		char[] flightTime = new char[12];
+		float cost = (float) 0.0;
+		Flight requested = null;
+		
 		try{
+			// Get flight ID from request data
+			int id = buff.getInt();
 			
+			// Get flight represented by id
+			requested = this.masterServer.getFlightData().getFlight(id);
 			
+			// Check to see if flight exists
+			if(requested != null){
+				// If so then get data required for reply
+				avail = requested.getAvailability();
+				flightTime = requested.getDepartureTime();
+				cost = requested.getAirFair();
+			}
+			
+			// Add reply data to reply buffer
+			reply.putInt(avail);
+			for(int i = 0; i < 12; i++){
+				reply.putChar(flightTime[i]);
+			}
+			reply.putFloat(cost);
 		}
 		catch(BufferUnderflowException e){
 			throw new InvalidMessageException("The data is not in correct format");
 		}
 		
-		return null;		
+		return reply;		
 	}
 	
 	/*	“A service that allows a user to make seat reservation on a flight by specifying the flight 
@@ -203,15 +264,37 @@ public class Worker implements Runnable {
 	*/	
 	private ByteBuffer messageType3(ByteBuffer buff) throws InvalidMessageException{
 		
+		// Initialise reply data buffer
+		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
+		
+		// Initialise default reply data
+		int reserved = -1;
+		Flight requested = null;
+		
 		try{
+			// Get required information from request data
+			int id = buff.getInt();
+			int n = buff.getInt();
 			
+			// Attempt to retrieve requested flight
+			requested = this.masterServer.getFlightData().getFlight(id);
 			
+			// Check is requested flight exists
+			if(requested != null){
+				// If so, attempt to book seats
+				if(this.masterServer.getFlightData().getFlight(id).bookSeats(n)){
+					reserved = n;
+				}
+				else reserved = 0;
+			}
+			// Add reply data to reply buffer
+			reply.putInt(reserved);
 		}
 		catch(BufferUnderflowException e){
 			throw new InvalidMessageException("The data is not in correct format");
 		}
 		
-		return null;	
+		return reply;	
 	}
 
 	/*	“A service that allows a user to monitor updates made to the seat availability 
@@ -221,15 +304,36 @@ public class Worker implements Runnable {
 	*/	
 	private ByteBuffer messageType4(ByteBuffer buff) throws InvalidMessageException{
 		
+		// Initialise reply data buffer
+		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
+		
+		// Initialise default reply data
+		int avail = -1;
+		Flight requested = null;
+		
 		try{
+			// Get required information from request data
+			int id = buff.getInt();
+			this.monitorLen = buff.getInt();
 			
+			// Attempt to retrieve requested flight
+			requested = this.masterServer.getFlightData().getFlight(id);
 			
+			// Check is requested flight exists
+			if(requested != null){
+				// If so then get availability and set this as observer
+				avail = this.masterServer.getFlightData().getFlight(id).getAvailability();
+				this.masterServer.getFlightData().getFlight(id).addObserver(this);
+			}
+			
+			// Add reply data to reply buffer
+			reply.putInt(avail);
 		}
 		catch(BufferUnderflowException e){
 			throw new InvalidMessageException("The data is not in correct format");
 		}
 		
-		return null;
+		return reply;	
 	}
 
 	/*	“A service that allows a user to cancel a seat reservation on a flight by specifying the 
@@ -240,6 +344,11 @@ public class Worker implements Runnable {
 	*/	
 	private ByteBuffer messageType5(ByteBuffer buff) throws InvalidMessageException{
 		
+		// Initialise reply data buffer
+		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
+		
+		// Initialise default reply data
+		
 		try{
 			
 			
@@ -248,7 +357,7 @@ public class Worker implements Runnable {
 			throw new InvalidMessageException("The data is not in correct format");
 		}
 		
-		return null;
+		return reply;	
 	}
 
 	/*	“A service that allows a user to query which destinations are available for any given source. 
@@ -257,6 +366,11 @@ public class Worker implements Runnable {
 	*/	
 	private ByteBuffer messageType6(ByteBuffer buff) throws InvalidMessageException{
 		
+		// Initialise reply data buffer
+		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
+		
+		// Initialise default reply data
+		
 		try{
 			
 			
@@ -265,7 +379,34 @@ public class Worker implements Runnable {
 			throw new InvalidMessageException("The data is not in correct format");
 		}
 		
-		return null;
+		return reply;	
 	}
 
+	@Override
+	public void update(Observable arg0, Object arg1) {
+
+		int avail = (int) arg1;
+		ByteBuffer byteReply = ByteBuffer.wrap(new byte[1000]);
+
+		byteReply.putInt(this.id);
+		byteReply.put(this.mType);
+		byteReply.putInt(avail);
+		DatagramPacket reply = new DatagramPacket(byteReply.array(), byteReply.array().length, this.request.getSocketAddress());
+	
+	
+	try {
+		this.outgoing = new DatagramSocket(8888);
+		this.outgoing.send(reply);
+		// We only want to add to the history is it was successfully sent
+		this.masterServer.getRequestHistory().add(new Message(id, reply));
+		this.outgoing.close();
+	} catch (SocketException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	
+	}
 }

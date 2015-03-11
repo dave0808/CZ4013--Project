@@ -1,20 +1,30 @@
 package data;
-public class Flight {
+
+import java.util.Observable;
+
+public class Flight extends Observable {
 
 	private int id;
 	private String source;
 	private String destination;
-	private double departureTime;
+	private char[] departureTime;
 	private float airFair;
 	private int availability;
 	
-	public Flight(int id, String src, String dst, double time, float fair, int avail){
+	public Flight(int id, String src, String dst, char[] time, float fair, int avail){
 		this.id = id;
 		this.source = src;
 		this.destination = dst;
-		this.departureTime = time;
 		this.airFair = fair;
 		this.availability = avail;
+
+		if(time.length == 12){
+			this.departureTime = time;
+		}
+		else{
+			this.departureTime = new char[12];
+		}
+		
 	}
 
 	public int getId() {
@@ -29,7 +39,7 @@ public class Flight {
 		return destination;
 	}
 
-	public double getDepartureTime() {
+	public char[] getDepartureTime() {
 		return departureTime;
 	}
 
@@ -48,6 +58,9 @@ public class Flight {
 		}
 		else{
 			this.availability =- no;
+			this.setChanged();
+			this.notifyObservers(this.availability);
+			this.clearChanged();
 			return true;
 		}
 	}
