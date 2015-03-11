@@ -2,6 +2,7 @@ package data;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +34,16 @@ public class FlightListing {
 		return requested;
 	}
 	
+	public Set<String> getDest(String src){
+		Set<String> destinations = new HashSet<String>();
+		
+		for(Flight f: this.Flights){
+			if(f.getSource().equals(src)){
+				destinations.add(f.getDestination());
+			}
+		}
+		return destinations;
+	}
 	public boolean hasAirport(String port){
 		
 		for(Flight f : Flights){

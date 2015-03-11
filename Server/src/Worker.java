@@ -370,10 +370,37 @@ public class Worker implements Runnable, Observer {
 		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
 		
 		// Initialise default reply data
+		int n = 0;
+		String[] destinations;
 		
 		try{
+			int len = buff.getInt();
+			String src = "";
 			
+			// The length of the source airport cannot be less than 1
+			if(len < 1) throw new InvalidMessageException("The data is not in correct format");
 			
+			// Get the source string from request
+			for(int i = 0; i < len; i++){
+				src += buff.getChar();
+			}
+			// Get destinations and reply data
+			destinations = this.masterServer.getFlightData().getDest(src).toArray(new String[1]);
+			n = destinations.length;
+			
+			// Put number of destinations into reply
+			reply.putInt(n);
+			
+			for(int i = 0; i < n; i++){
+				char[] temp = destinations[i].toCharArray();
+				
+				// Add length of following character sequence
+				reply.putInt(temp.length);
+				// Enter the character sequence
+				for(int j = 0; j < temp.length; j++){
+					reply.putChar(temp[j]);
+				}
+			}
 		}
 		catch(BufferUnderflowException e){
 			throw new InvalidMessageException("The data is not in correct format");
