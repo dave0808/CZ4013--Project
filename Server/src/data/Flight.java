@@ -10,13 +10,15 @@ public class Flight extends Observable {
 	private char[] departureTime;
 	private float airFair;
 	private int availability;
+	private int booked;
 	
-	public Flight(int id, String src, String dst, char[] time, float fair, int avail){
+	public Flight(int id, String src, String dst, char[] time, float fair, int nSeats){
 		this.id = id;
 		this.source = src;
 		this.destination = dst;
 		this.airFair = fair;
-		this.availability = avail;
+		this.availability = nSeats;
+		this.booked = 0;
 
 		if(time.length == 12){
 			this.departureTime = time;
@@ -58,6 +60,22 @@ public class Flight extends Observable {
 		}
 		else{
 			this.availability =- no;
+			this.booked = no;
+			this.setChanged();
+			this.notifyObservers(this.availability);
+			this.clearChanged();
+			return true;
+		}
+	}
+
+	public boolean cancelSeats(int no){
+		
+		if( no > this.booked){
+			return false;
+		}
+		else{
+			this.booked =- no;
+			this.availability += no;
 			this.setChanged();
 			this.notifyObservers(this.availability);
 			this.clearChanged();

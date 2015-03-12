@@ -86,6 +86,23 @@ public class FlightListing {
 		return booked;
 	}
 	
+	/*
+	 * Attempts to book number n tickets for flight id
+	 * True if possible and false if not. 
+	 * This should always be carried out after checking if flight exists
+	 */
+	public boolean cancelTickets(int id, int n){
+		
+		boolean canceled = false;
+		
+		for(Flight f : Flights){
+			if(f.getId() == id){
+				canceled = f.cancelSeats(n);
+				break;
+			}
+		}
+		return canceled;
+	}
 	private void getFlightData(String fileName){
 		// TODO parse file and fill datastructure
 	}

@@ -345,19 +345,36 @@ public class Worker implements Runnable, Observer {
 	private ByteBuffer messageType5(ByteBuffer buff) throws InvalidMessageException{
 		
 		// Initialise reply data buffer
-		ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
-		
-		// Initialise default reply data
-		
-		try{
-			
-			
-		}
-		catch(BufferUnderflowException e){
-			throw new InvalidMessageException("The data is not in correct format");
-		}
-		
-		return reply;	
+				ByteBuffer reply = ByteBuffer.wrap(new byte[1000]);
+				
+				// Initialise default reply data
+				int canceled = -1;
+				Flight requested = null;
+				
+				try{
+					// Get required information from request data
+					int id = buff.getInt();
+					int n = buff.getInt();
+					
+					// Attempt to retrieve requested flight
+					requested = this.masterServer.getFlightData().getFlight(id);
+					
+					// Check is requested flight exists
+					if(requested != null){
+						// If so, attempt to cancel seats
+						if(this.masterServer.getFlightData().getFlight(id).cancelSeats(n)){
+							canceled = n;
+						}
+						else canceled = 0;
+					}
+					// Add reply data to reply buffer
+					reply.putInt(canceled);
+				}
+				catch(BufferUnderflowException e){
+					throw new InvalidMessageException("The data is not in correct format");
+				}
+				
+				return reply;	
 	}
 
 	/*	“A service that allows a user to query which destinations are available for any given source. 
