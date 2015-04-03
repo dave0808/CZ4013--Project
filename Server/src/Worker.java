@@ -39,15 +39,18 @@ public class Worker implements Runnable, Observer {
 	public void run() {
 		DatagramPacket reply = null;
 		
-
+		// Wrap data inside bytebuffer for easy unmarshalling
 		ByteBuffer bb = ByteBuffer.wrap(this.request.getData());
 		
 		try {
-			
 			this.id = bb.getInt();
 			this.mType = bb.get();
 			
-			Message dummy = new Message(id, new DatagramPacket(null, 0, this.request.getSocketAddress()));
+			System.out.println("id---------" + this.id + "---------");
+			System.out.println("type---------" + this.mType + "---------");		
+			
+			// Create dummy flight to use as comparison 
+			Message dummy = new Message(id, new DatagramPacket(new byte[1], 0, this.request.getSocketAddress()));
 
 		// Check if History already contains this request
 		if(this.masterServer.getRequestHistory().contains(dummy)){
@@ -59,11 +62,14 @@ public class Worker implements Runnable, Observer {
 			}
 		}
 		else{
-			// if not then continue on and create reply
-			ByteBuffer tempReply = this.process(bb);
-			
-			ByteBuffer byteReply = ByteBuffer.wrap(new byte[1000]);
 
+			// if not then continue on and create reply
+			ByteBuffer tempReply = this.process(bb, this.mType);
+			
+			// Wrap reply byte array inside bytebuffer
+			ByteBuffer byteReply = ByteBuffer.wrap(new byte[2000]);
+
+			// Ass necessary data into reply
 			byteReply.putInt(this.id);
 			byteReply.put(this.mType);
 			tempReply.position(0);
@@ -71,11 +77,13 @@ public class Worker implements Runnable, Observer {
 			reply = new DatagramPacket(byteReply.array(), byteReply.array().length, this.request.getSocketAddress());
 		}
 		
-		this.outgoing = new DatagramSocket(8888);
+		// Open up socket for sending reply
+		this.outgoing = new DatagramSocket(8889);
 		this.outgoing.send(reply);
 		
 		// We only want to add to the history is it was successfully sent
 		this.masterServer.getRequestHistory().add(new Message(id, reply));
+		// Close socket
 		this.outgoing.close();
 		
 		// Check if we need to perform the monitoring function
@@ -89,9 +97,12 @@ public class Worker implements Runnable, Observer {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				
+				// Add elapsed time onto counter
 				time += 0.25;
+				
+				// Check if required time has elapsed. 
 				if(time >= this.monitorLen){
+					// If so, break out of while loop
 					break;
 				}
 			}
@@ -109,7 +120,7 @@ public class Worker implements Runnable, Observer {
 		}
 	}
 	
-	private ByteBuffer process(ByteBuffer buff) throws InvalidMessageException{
+	private ByteBuffer process(ByteBuffer buff, byte type) throws InvalidMessageException{
 		ByteBuffer reply = null;
 		
 		try{
@@ -119,7 +130,9 @@ public class Worker implements Runnable, Observer {
 			 * Switch and carry out appropriate service,
 			 * if request is incomplete or doesn't represent a service then throw InvalidMessageException
 			 */
-			switch(buff.get()){
+			
+			
+			switch(type){
 				case 1 : reply = this.messageType1(buff);
 				break;
 				case 2 : reply = this.messageType2(buff);
@@ -430,20 +443,27 @@ public class Worker implements Runnable, Observer {
 	public void update(Observable arg0, Object arg1) {
 
 		int avail = (int) arg1;
+		// Warp reply byte array inside bytebuffer
 		ByteBuffer byteReply = ByteBuffer.wrap(new byte[1000]);
 
+		// Insert data into reply
 		byteReply.putInt(this.id);
 		byteReply.put(this.mType);
 		byteReply.putInt(avail);
+		
+		// Package reply
 		DatagramPacket reply = new DatagramPacket(byteReply.array(), byteReply.array().length, this.request.getSocketAddress());
 	
 	
 	try {
+		// open up socket for sending reply
 		this.outgoing = new DatagramSocket(8888);
 		this.outgoing.send(reply);
+		
 		// We only want to add to the history is it was successfully sent
 		this.masterServer.getRequestHistory().add(new Message(id, reply));
 		this.outgoing.close();
+		
 	} catch (SocketException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();

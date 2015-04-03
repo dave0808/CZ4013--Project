@@ -1,3 +1,4 @@
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -25,7 +26,7 @@ public class Server {
 	// Storage for request history
 	private Set<Message> requestHistory;
 	// Name of the file containing the flight data
-	private static final String FILENAME = "flightdata.csv";
+	private static final String FILENAME = "flightDeets.csv";
 	
 	public Server(){
 		
@@ -35,7 +36,14 @@ public class Server {
 		
 		System.out.println("Initialising storage.");
 		// Initialise Flight data store
-		this.flightData = new FlightListing(FILENAME);
+		try {
+			this.flightData = new FlightListing(FILENAME);
+			System.out.println("Flight list initialised.");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.exit(1);
+		}
 		
 		// Initialise structure for storing flight history
 		this.requestHistory =  Collections.newSetFromMap(new ConcurrentHashMap<Message,Boolean>());
