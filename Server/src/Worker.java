@@ -83,7 +83,6 @@ public class Worker implements Runnable, Observer {
 			System.arraycopy(byteReply.array(), 0, toSend, 0, pos);
 			
 			reply = new DatagramPacket(toSend, pos, this.request.getSocketAddress());
-			reply.setPort(2222);
 		}
 		
 		// Open up socket for sending reply
