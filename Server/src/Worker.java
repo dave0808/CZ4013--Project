@@ -68,7 +68,7 @@ public class Worker implements Runnable, Observer {
 			ByteBuffer tempReply = this.process(bb, this.mType);
 			
 			// Wrap reply byte array inside bytebuffer
-			ByteBuffer byteReply = ByteBuffer.wrap(new byte[3000]);
+			ByteBuffer byteReply = ByteBuffer.wrap(new byte[1000]);
 
 			// Ass necessary data into reply
 			byteReply.putInt(this.id);
@@ -183,13 +183,13 @@ public class Worker implements Runnable, Observer {
 			origLen = buff.getInt();
 			// Build origin string
 			for(int i = 0; i < origLen;i++){
-				orig += buff.getChar();
+				orig += (char)buff.get();
 			}
 			// Get length of destination string
 			destLen = buff.getInt();
 			// Build destination string
 			for(int i = 0; i < destLen;i++){
-				dest += buff.getChar();
+				dest += (char)buff.get();
 			}
 			
 			// Check database for flights
@@ -420,7 +420,7 @@ public class Worker implements Runnable, Observer {
 			
 			// Get the source string from request
 			for(int i = 0; i < len; i++){
-				src += buff.getChar();
+				src += (char)buff.get();
 			}
 			// Get destinations and reply data
 			destinations = this.masterServer.getFlightData().getDest(src);
@@ -437,7 +437,7 @@ public class Worker implements Runnable, Observer {
 				reply.putInt(temp.length);
 				// Enter the character sequence
 				for(int j = 0; j < temp.length; j++){
-					reply.putChar(temp[j]);
+					reply.put((byte)temp[j]);
 				}
 			}
 		}
