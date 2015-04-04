@@ -25,15 +25,24 @@ public class Worker implements Runnable, Observer {
 	// Length of time it should monitor a flight, 
 	//should only be set to a number if  service is requested
 	private int monitorLen = 0;
+	private int monitorFlight = -1;
 	
 	private int id = -1;
 	private byte mType = 0;
 	
-	public Worker(Server master, DatagramPacket req, DatagramSocket soc){
+	/*
+	 * Variable storing the type of invocation semantics
+	 * False for at least once
+	 * True for at most once
+	 */
+	private boolean invocSemantic = false;
+	
+	public Worker(Server master, DatagramPacket req, DatagramSocket soc, boolean invocation){
 		
 		this.masterServer = master;
 		this.request = req;
 		this.outgoing = soc;
+		this.invocSemantic = invocation;
 	}
 	
 	@Override
@@ -54,7 +63,7 @@ public class Worker implements Runnable, Observer {
 			Message dummy = new Message(id, new DatagramPacket(new byte[1], 0, this.request.getSocketAddress()));
 
 		// Check if History already contains this request
-		if(this.masterServer.getRequestHistory().contains(dummy)){
+		if(this.masterServer.getRequestHistory().contains(dummy) && this.invocSemantic){
 			// If so, get reply and resend	
 			for (Message m : this.masterServer.getRequestHistory()){
 				if(m.equals(dummy)){
@@ -94,6 +103,7 @@ public class Worker implements Runnable, Observer {
 		
 		// Check if we need to perform the monitoring function
 		if(this.monitorLen > 0){
+			System.out.println("Monitoring of flight " + this.monitorFlight + " starting.");
 			double time = 0;
 			while(true){
 				
@@ -109,6 +119,8 @@ public class Worker implements Runnable, Observer {
 				// Check if required time has elapsed. 
 				if(time >= this.monitorLen){
 					// If so, break out of while loop
+					System.out.println("Monitoring of flight " + this.monitorFlight + " ending.");
+					this.masterServer.getFlightData().getFlight(this.monitorFlight).deleteObserver(this);
 					break;
 				}
 			}
@@ -342,6 +354,7 @@ public class Worker implements Runnable, Observer {
 			if(requested != null){
 				// If so then get availability and set this as observer
 				avail = this.masterServer.getFlightData().getFlight(id).getAvailability();
+				this.monitorFlight = id;
 				this.masterServer.getFlightData().getFlight(id).addObserver(this);
 			}
 			

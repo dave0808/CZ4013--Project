@@ -3,6 +3,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.Collections;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -26,10 +27,32 @@ public class Server {
 	private Set<Message> requestHistory;
 	// Name of the file containing the flight data
 	private static final String FILENAME = "flightDeets.csv";
+	// Random Number Generator for simulating packetloss
+	private Random r;
 	
-	public Server(){
+	/*
+	 * Variable storing the type of invocation semantics
+	 * False for at least once
+	 * True for at most once
+	 */
+	private boolean invocSemantic = false;
+	
+	/* Probability that server will not receive a packet
+	 * This should be a number between 0 and 1 inclusive
+	 */
+	private float failProb = 1;
+	
+	public Server(boolean invocation, float fail){
 		
 		System.out.println("Initialising Server.");
+		
+		// These should be passed in
+		this.invocSemantic = invocation;
+		this.failProb =fail;
+		
+		// INitialise Random Number Generator
+		this.r = new Random();
+		
 		// Using CachedThreadpool to allow dynamic response
 		this.pool = Executors.newCachedThreadPool();
 		
@@ -61,9 +84,17 @@ public class Server {
 				System.out.println("Listening for incoming packet.");
 				this.incoming.receive(request);
 				
-				// Pass onto worker thread to process and create reply
-				System.out.println("Passing to worker thread.");
-				this.pool.execute(new Worker(this, request, this.incoming));
+				// Packet is received, but simulate packet loss at given probability
+				
+				if(r.nextFloat() > this.failProb){
+					// Pass onto worker thread to process and create reply
+					System.out.println("Passing to worker thread.");
+					this.pool.execute(new Worker(this, request, this.incoming, this.invocSemantic));
+				}
+				else{
+					System.out.println("Packet from " + request.getSocketAddress().toString() + " lost");
+				}
+					
 			}
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
