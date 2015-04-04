@@ -97,6 +97,9 @@ public class Worker implements Runnable, Observer {
 		// Open up socket for sending reply
 		this.outgoing.send(reply);
 		
+		System.out.println("Reply sent.");
+		System.out.println(reply.getData().toString());
+		
 		// We only want to add to the history is it was successfully sent
 		this.masterServer.getRequestHistory().add(new Message(id, reply));
 		// Close socket
@@ -480,7 +483,7 @@ public class Worker implements Runnable, Observer {
 		// open up socket for sending reply
 		this.outgoing.send(reply);
 		
-		System.out.println("Reply sent");
+		System.out.println("Update sent.");
 		System.out.println(reply.getData());
 		
 		// We only want to add to the history is it was successfully sent

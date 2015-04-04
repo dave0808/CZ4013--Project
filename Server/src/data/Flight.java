@@ -55,7 +55,7 @@ public class Flight extends Observable {
 	
 	public boolean bookSeats(int no){
 		
-		if( no > this.availability){
+		if( no > this.availability && (no > 0)){
 			return false;
 		}
 		else{
@@ -70,7 +70,7 @@ public class Flight extends Observable {
 
 	public boolean cancelSeats(int no){
 		
-		if( no > this.booked){
+		if( no > this.booked && (no > 0)){
 			return false;
 		}
 		else{
