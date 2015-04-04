@@ -1,4 +1,3 @@
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -51,7 +50,7 @@ public class Server {
 		try {
 			// Open UDP Socket on port 8888
 			System.out.println("Opening datagram socket.");
-			this.incoming = new DatagramSocket(8888);
+			this.incoming = new DatagramSocket(2222);
 			
 			while(true){
 				
@@ -64,7 +63,7 @@ public class Server {
 				
 				// Pass onto worker thread to process and create reply
 				System.out.println("Passing to worker thread.");
-				this.pool.execute(new Worker(this, request));
+				this.pool.execute(new Worker(this, request, this.incoming));
 			}
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block

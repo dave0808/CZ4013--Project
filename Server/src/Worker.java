@@ -7,6 +7,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Set;
 
 import data.Flight;
 import data.InvalidMessageException;
@@ -28,11 +29,11 @@ public class Worker implements Runnable, Observer {
 	private int id = -1;
 	private byte mType = 0;
 	
-	public Worker(Server master, DatagramPacket req){
+	public Worker(Server master, DatagramPacket req, DatagramSocket soc){
 		
 		this.masterServer = master;
 		this.request = req;
-		
+		this.outgoing = soc;
 	}
 	
 	@Override
@@ -67,24 +68,30 @@ public class Worker implements Runnable, Observer {
 			ByteBuffer tempReply = this.process(bb, this.mType);
 			
 			// Wrap reply byte array inside bytebuffer
-			ByteBuffer byteReply = ByteBuffer.wrap(new byte[2000]);
+			ByteBuffer byteReply = ByteBuffer.wrap(new byte[3000]);
 
 			// Ass necessary data into reply
 			byteReply.putInt(this.id);
 			byteReply.put(this.mType);
-			tempReply.position(0);
-			byteReply.put(tempReply);
-			reply = new DatagramPacket(byteReply.array(), byteReply.array().length, this.request.getSocketAddress());
+			
+			byteReply.put(tempReply.array(), 0, tempReply.position());
+			
+			int pos = byteReply.position();
+			
+			byte[] toSend = new byte[pos];
+			
+			System.arraycopy(byteReply.array(), 0, toSend, 0, pos);
+			
+			reply = new DatagramPacket(toSend, pos, this.request.getSocketAddress());
+			reply.setPort(2222);
 		}
 		
 		// Open up socket for sending reply
-		this.outgoing = new DatagramSocket(8889);
 		this.outgoing.send(reply);
 		
 		// We only want to add to the history is it was successfully sent
 		this.masterServer.getRequestHistory().add(new Message(id, reply));
 		// Close socket
-		this.outgoing.close();
 		
 		// Check if we need to perform the monitoring function
 		if(this.monitorLen > 0){
@@ -258,7 +265,7 @@ public class Worker implements Runnable, Observer {
 			// Add reply data to reply buffer
 			reply.putInt(avail);
 			for(int i = 0; i < 12; i++){
-				reply.putChar(flightTime[i]);
+				reply.put((byte)flightTime[i]);
 			}
 			reply.putFloat(cost);
 		}
@@ -401,7 +408,8 @@ public class Worker implements Runnable, Observer {
 		
 		// Initialise default reply data
 		int n = 0;
-		String[] destinations;
+		
+		Set<String> destinations;
 		
 		try{
 			int len = buff.getInt();
@@ -415,14 +423,15 @@ public class Worker implements Runnable, Observer {
 				src += buff.getChar();
 			}
 			// Get destinations and reply data
-			destinations = this.masterServer.getFlightData().getDest(src).toArray(new String[1]);
-			n = destinations.length;
+			destinations = this.masterServer.getFlightData().getDest(src);
+			
+			n = destinations.size();
 			
 			// Put number of destinations into reply
 			reply.putInt(n);
 			
-			for(int i = 0; i < n; i++){
-				char[] temp = destinations[i].toCharArray();
+			for(String s : destinations){
+				char[] temp = s.toCharArray();
 				
 				// Add length of following character sequence
 				reply.putInt(temp.length);
@@ -457,12 +466,13 @@ public class Worker implements Runnable, Observer {
 	
 	try {
 		// open up socket for sending reply
-		this.outgoing = new DatagramSocket(8888);
 		this.outgoing.send(reply);
+		
+		System.out.println("Reply sent");
+		System.out.println(reply.getData());
 		
 		// We only want to add to the history is it was successfully sent
 		this.masterServer.getRequestHistory().add(new Message(id, reply));
-		this.outgoing.close();
 		
 	} catch (SocketException e) {
 		// TODO Auto-generated catch block
