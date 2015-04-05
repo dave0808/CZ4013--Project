@@ -59,8 +59,8 @@ public class Flight extends Observable {
 			return false;
 		}
 		else{
-			this.availability =- no;
-			this.booked = no;
+			this.availability -= no;
+			this.booked += no;
 			this.setChanged();
 			this.notifyObservers(this.availability);
 			this.clearChanged();
@@ -74,7 +74,7 @@ public class Flight extends Observable {
 			return false;
 		}
 		else{
-			this.booked =- no;
+			this.booked -= no;
 			this.availability += no;
 			this.setChanged();
 			this.notifyObservers(this.availability);

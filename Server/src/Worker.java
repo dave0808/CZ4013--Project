@@ -54,10 +54,7 @@ public class Worker implements Runnable, Observer {
 		
 		try {
 			this.id = bb.getInt();
-			this.mType = bb.get();
-			
-			System.out.println("id---------" + this.id + "---------");
-			System.out.println("type---------" + this.mType + "---------");		
+			this.mType = bb.get();	
 			
 			// Create dummy flight to use as comparison 
 			Message dummy = new Message(id, new DatagramPacket(new byte[1], 0, this.request.getSocketAddress()));
@@ -98,7 +95,6 @@ public class Worker implements Runnable, Observer {
 		this.outgoing.send(reply);
 		
 		System.out.println("Reply sent.");
-		System.out.println(reply.getData().toString());
 		
 		// We only want to add to the history is it was successfully sent
 		this.masterServer.getRequestHistory().add(new Message(id, reply));
@@ -438,22 +434,31 @@ public class Worker implements Runnable, Observer {
 				src += (char)buff.get();
 			}
 			// Get destinations and reply data
-			destinations = this.masterServer.getFlightData().getDest(src);
-			
-			n = destinations.size();
-			
-			// Put number of destinations into reply
-			reply.putInt(n);
-			
-			for(String s : destinations){
-				char[] temp = s.toCharArray();
+			if(this.masterServer.getFlightData().hasAirport(src)){
 				
-				// Add length of following character sequence
-				reply.putInt(temp.length);
-				// Enter the character sequence
-				for(int j = 0; j < temp.length; j++){
-					reply.put((byte)temp[j]);
+				destinations = this.masterServer.getFlightData().getDest(src);
+			
+				n = destinations.size();
+				
+				// Put number of destinations into reply
+				reply.putInt(n);
+				
+				for(String s : destinations){
+					char[] temp = s.toCharArray();
+					
+					// Add length of following character sequence
+					reply.putInt(temp.length);
+					// Enter the character sequence
+					for(int j = 0; j < temp.length; j++){
+						reply.put((byte)temp[j]);
+					}
 				}
+			}
+			else{
+				//Airport not recognised
+				n = -1;
+				// Put number of destinations into reply
+				reply.putInt(n);				
 			}
 		}
 		catch(BufferUnderflowException e){
@@ -484,7 +489,6 @@ public class Worker implements Runnable, Observer {
 		this.outgoing.send(reply);
 		
 		System.out.println("Update sent.");
-		System.out.println(reply.getData());
 		
 		// We only want to add to the history is it was successfully sent
 		this.masterServer.getRequestHistory().add(new Message(id, reply));
